@@ -657,6 +657,20 @@ fun installBoot(
         }
     }
 
+    // Patching an image on a device that is not rooted yet: the backend's
+    // `boot-patch` needs /data/adb/magisk/boot_patch.sh, which only exists once
+    // Magisk is installed. Run the installer bundled with this APK instead.
+    if (bootFile != null && LocalBootPatcher.isAvailable()) {
+        val downloadsDir =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        val destination = outputDir ?: downloadsDir
+        val name = if (outputDir != null) "lkm-patched.img" else "magisk_patched.img"
+        val patched = LocalBootPatcher.patch(bootFile, destination, name, onStdout, onStderr)
+        Log.i("KernelSU", "local boot patch result: ${patched.code}")
+        bootFile.delete()
+        return patched
+    }
+
     var cmd = "boot-patch"
 
     cmd += if (bootFile == null) {
