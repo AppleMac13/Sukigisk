@@ -517,7 +517,7 @@ private fun InactiveStatusCard(
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
             )
-            if (notInstalled && BackendCompat.supportsBootPatch) {
+            if (BackendCompat.supportsBootPatch) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TextButton(
                         text = customText(CustomTextKey.HOME_BTN_INSTALL),

@@ -365,7 +365,9 @@ class MainActivity : ComponentActivity() {
                             entry<Route.AppProfile>(swipeDismiss = swipeDismiss) { key -> AppProfileScreen(key.uid) }
                             entry<Route.ModuleRepo>(swipeDismiss = swipeDismiss) { ModuleRepoScreen() }
                             entry<Route.ModuleRepoDetail>(swipeDismiss = swipeDismiss) { key -> ModuleRepoDetailScreen(key.module) }
-                            entry<Route.Install>(swipeDismiss = swipeDismiss) { LaunchedEffect(Unit) { navigator.pop() } }
+                            entry<Route.Install>(swipeDismiss = swipeDismiss) { key ->
+                                InstallScreen(key.preselectedKernelUri)
+                            }
                             entry<Route.Flash>(swipeDismiss = if (flashBackEnabled) swipeDismiss else NavSwipeDirection.None) { key ->
                                 FlashScreen(
                                     key.flashIt,

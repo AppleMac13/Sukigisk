@@ -453,7 +453,7 @@ private fun InactiveStatusCard(
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Black,
             )
-            if (notInstalled && BackendCompat.supportsBootPatch) {
+            if (BackendCompat.supportsBootPatch) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = actions.onInstallClick) {
                         Text(customText(CustomTextKey.HOME_BTN_INSTALL))
