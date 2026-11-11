@@ -18,7 +18,6 @@ local.properties
 # Kotlin / Java artifacts (keep build-required jars)
 *.jar
 !**/gradle-wrapper.jar
-!manager/app/libs/*.jar
 
 # IDE
 .idea/

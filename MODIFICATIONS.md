@@ -13,6 +13,7 @@
 |---|---|
 | `gradle.properties` | 新增 `KSU_NAME=Sukigisk`、`KSU_PACKAGE_NAME=com.appstor678.sukigk`；新增 `KSU_VERSION_NAME`、`KSU_VERSION_CODE` 用于覆盖版本号 |
 | `build.gradle.kts` | `getVersionName()` / `getVersionCode()` 支持通过 Gradle 属性或环境变量覆盖，未提供时仍回落到 `git describe` 与 commit 计数 |
+| `app/build.gradle.kts` | 图标依赖由本地 `libs/material-icons-custom.jar` 改为 Maven 坐标 `androidx.compose.material:material-icons-extended`，仓库中不再包含该预编译 jar |
 | `app/src/main/java/com/sukisu/ultra/ui/screen/about/AboutMaterial.kt` | 移除「检查更新」「检查 CI 版本更新」两个开关；移除贡献者头像墙与贡献者姓名墙整块（含人数徽章与两段提示）；关于正文改为本地文本，GitHub 地址渲染为内联超链接而非点击跳转网页 |
 | `app/src/main/java/com/sukisu/ultra/ui/screen/home/HomeMaterial.kt` | 首页底部入口原本跳转 `https://sukisu.org/guide/`，改为跳转应用内关于页；条目文案改为「关于 Sukigisk」 |
 | `app/src/main/java/com/sukisu/ultra/ui/screen/home/HomeMiuix.kt` | 同上（Miuix 界面实现） |
