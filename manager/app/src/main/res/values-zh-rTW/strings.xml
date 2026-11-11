@@ -228,7 +228,7 @@
     <string name="module_shortcut_permission_tip_default">若建立捷徑失敗，請在系統設定中為此應用啟用桌面捷徑權限。</string>
     <string name="no_such_module">模組 %s 不存在</string>
     <string name="module_unavailable">模組 %s 已停用、更新中或待移除</string>
-    <string name="select_file_tip_nogki">請選擇要修補的 GKI 裝置映像檔</string>
+    <string name="select_file_tip_nogki">請選擇要修補的 boot 映像檔</string>
     <string name="current_kmi">本裝置的 KMI 版本：%s</string>
     <string name="current_device_kmi">目前裝置的 KMI</string>
     <string name="settings_enable_blur">模糊</string>

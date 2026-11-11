@@ -275,7 +275,7 @@ internal fun InstallScreenMiuix(
                         }
                     }
 
-                    if (uiState.canPatchKpm) {
+                    if (false) { // KPM 选择已隐藏（Magisk 后端无 KPM）
                         AppCard(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -326,6 +326,7 @@ internal fun InstallScreenMiuix(
                         }
                     }
 
+                    if (false) { // 高级选项入口已隐藏
                     AppCard(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -431,6 +432,7 @@ internal fun InstallScreenMiuix(
                                 }
                             }
                         }
+                    }
                     }
 
                     // AnyKernel3 刷写

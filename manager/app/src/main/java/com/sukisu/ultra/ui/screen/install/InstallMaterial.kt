@@ -188,7 +188,7 @@ internal fun InstallScreenMaterial(
                     }
                 }
             )
-            if (uiState.canPatchKpm) {
+            if (false) { // KPM 选择已隐藏（Magisk 后端无 KPM）
                 SegmentedColumn(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
@@ -236,6 +236,7 @@ internal fun InstallScreenMaterial(
                     }
                 }
             }
+            if (false) { // 高级选项入口已隐藏
             SegmentedColumn(
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
@@ -327,6 +328,7 @@ internal fun InstallScreenMaterial(
                         singleLine = true
                     )
                 }
+            }
             }
             // AnyKernel3 刷写
             (uiState.installMethod as? InstallMethod.HorizonKernel)?.let { method ->
