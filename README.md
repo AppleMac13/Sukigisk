@@ -50,7 +50,3 @@ GNU General Public License v3.0，全文见 [LICENSE](LICENSE)。
 - SukiSU-Ultra — https://github.com/SukiSU-Ultra/SukiSU-Ultra （GPL-3.0）
 
 对上游源码的修改见 [MODIFICATIONS.md](MODIFICATIONS.md)。按 GPL-3.0 第 5 条，修改过的文件在其中逐一列明。
-
-## 依赖说明
-
-仓库内不含任何预编译产物或二进制依赖，全部依赖来自 Maven 仓库；`*.so` 由 `manager/app/src/main/cpp/` 下的源码在构建时生成。`gradle-wrapper.jar` 是 Gradle Wrapper 的标准引导文件，属构建工具链的一部分。
