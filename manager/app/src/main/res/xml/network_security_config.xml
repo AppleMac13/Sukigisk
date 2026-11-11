@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Local inference servers commonly run over plain HTTP on a LAN address.
+         Registry, update and download traffic stays on HTTPS regardless. -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

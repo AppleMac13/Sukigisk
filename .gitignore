@@ -1,0 +1,36 @@
+# Android / Gradle
+build/
+*/build/
+out/
+.gradle/
+.kotlin/
+.cxx/
+local.properties
+*.hprof
+
+# Native
+*.o
+*.a
+*.so
+*.dex
+*.class
+
+# Kotlin / Java artifacts (keep build-required jars)
+*.jar
+!**/gradle-wrapper.jar
+!manager/app/libs/*.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Signing
+sign.properties
+*.jks
+*.keystore
