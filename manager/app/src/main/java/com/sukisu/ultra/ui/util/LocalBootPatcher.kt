@@ -1,6 +1,10 @@
 package com.sukisu.ultra.ui.util
 
-import android.system.Os
+import android.content.ContentValues
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Log
 import com.sukisu.ultra.ksuApp
 import java.io.File
@@ -123,9 +127,13 @@ object LocalBootPatcher {
     }
 
     /**
-     * Copy the patched image where the user asked for it. /sdcard/Download is
-     * FUSE-backed and may refuse an app without full storage access, so fall
-     * back to the app's own external directory and report the real path.
+     * Copy the patched image where the user asked for it.
+     *
+     * A plain write only works on the public Download folder when the app
+     * already holds full storage access, which a normal install on Android 10+
+     * does not have. Publishing through the MediaStore Download collection
+     * needs no permission at all, so that is the second attempt; app-scoped
+     * storage is only a last resort.
      */
     private fun writeOut(
         produced: File,
@@ -134,11 +142,24 @@ object LocalBootPatcher {
         onStdout: (String) -> Unit,
         onStderr: (String) -> Unit,
     ): File {
-        val candidates = listOfNotNull(
-            outDir,
-            ksuApp.getExternalFilesDir(null),
-        )
-        for (dir in candidates) {
+        runCatching {
+            outDir.mkdirs()
+            produced.copyTo(File(outDir, outName), overwrite = true)
+        }.onSuccess {
+            val target = File(outDir, outName)
+            onStdout("- Output: ${target.absolutePath}")
+            return target
+        }
+
+        if (isPublicDownloads(outDir)) {
+            mediaStorePublish(produced, outName)?.let { target ->
+                onStdout("- Output: ${target.absolutePath}")
+                return target
+            }
+            onStderr("! MediaStore refused the download; falling back to app storage")
+        }
+
+        for (dir in listOfNotNull(ksuApp.getExternalFilesDir(null))) {
             val target = File(dir, outName)
             val ok = runCatching {
                 dir.mkdirs()
@@ -155,5 +176,44 @@ object LocalBootPatcher {
         onStderr("! Could not write to ${outDir.absolutePath}, kept ${fallback.absolutePath}")
         onStdout("- Output: ${fallback.absolutePath}")
         return fallback
+    }
+
+    private fun isPublicDownloads(dir: File): Boolean {
+        @Suppress("DEPRECATION")
+        val pub = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        return dir.absolutePath.trimEnd('/') == pub.absolutePath.trimEnd('/')
+    }
+
+    /**
+     * Write the image into the public Download folder without permissions.
+     * Returns the resulting file, or null when MediaStore rejected it.
+     */
+    private fun mediaStorePublish(produced: File, outName: String): File? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val resolver = ksuApp.contentResolver
+        var uri: Uri? = null
+        return runCatching {
+            val pending = ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, outName)
+                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+            uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, pending)
+            val entry = uri ?: error("MediaStore refused the insert")
+            resolver.openOutputStream(entry)?.use { out ->
+                produced.inputStream().use { input -> input.copyTo(out) }
+            } ?: error("no output stream for $entry")
+            val done = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
+            resolver.update(entry, done, null, null)
+            val realName = resolver.query(
+                entry, arrayOf(MediaStore.Downloads.DISPLAY_NAME), null, null, null,
+            )?.use { cursor -> if (cursor.moveToFirst()) cursor.getString(0) else outName } ?: outName
+            @Suppress("DEPRECATION")
+            File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), realName)
+        }.getOrElse { e ->
+            Log.w(TAG, "MediaStore publish failed", e)
+            runCatching { uri?.let { resolver.delete(it, null, null) } }
+            null
+        }
     }
 }
