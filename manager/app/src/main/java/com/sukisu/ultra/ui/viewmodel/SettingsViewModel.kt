@@ -888,12 +888,7 @@ homePillScale = HomeStatusStyle.coercePillScale(repo.homePillScale),
         } else {
             emptyMap()
         }
-        val builtinIconIds = setOf(
-            BuiltinAppIcons.DEFAULT_ID,
-            BuiltinAppIcons.KERNELSU_ID,
-            BuiltinAppIcons.LOGO_ID,
-            BuiltinAppIcons.ZAKO_ID,
-        )
+        val builtinIconIds = BuiltinAppIcons.all.map { it.id }.toSet()
         val exportedIconId = if (repo.appIconId in builtinIconIds) {
             repo.appIconId
         } else {
@@ -1752,12 +1747,7 @@ homePillScale = if (options.homeCardDisplay) source.homePillScale else null,
 
         var effectiveIconId = current.appIconId
         if (options.appIcon) {
-            val builtinIconIds = setOf(
-                BuiltinAppIcons.DEFAULT_ID,
-                BuiltinAppIcons.KERNELSU_ID,
-                BuiltinAppIcons.LOGO_ID,
-                BuiltinAppIcons.ZAKO_ID,
-            )
+            val builtinIconIds = BuiltinAppIcons.all.map { it.id }.toSet()
             val targetIconId = data.appIconId?.takeIf { it in builtinIconIds }
             if (targetIconId != null) {
                 repo.appIconId = targetIconId

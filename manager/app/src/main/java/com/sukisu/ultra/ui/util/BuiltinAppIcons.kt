@@ -26,6 +26,14 @@ object BuiltinAppIcons {
     const val KERNELSU_ID = "kernelsu"
     const val LOGO_ID = "sukisu_logo"
     const val ZAKO_ID = "zako"
+    const val ARIS_ID = "aris"
+    const val ARONA_ID = "arona"
+    const val SHIROKO_ID = "shiroko"
+    const val KEY_ID = "key"
+    const val HINA_ID = "hina"
+    const val PLANA_ID = "plana"
+    const val HOSHINO_ID = "hoshino"
+    const val SLEEPYGPT_ID = "sleepy_gpt"
 
     private const val TAG = "BuiltinAppIcons"
     private val mainActivityName = MainActivity::class.java.name
@@ -34,8 +42,8 @@ object BuiltinAppIcons {
         BuiltinAppIcon(
             id = DEFAULT_ID,
             nameRes = R.string.app_icon_builtin_default,
-            iconRes = R.mipmap.ic_launcher,
-            foregroundRes = R.drawable.ic_launcher_foreground,
+            iconRes = R.mipmap.ic_launcher_key,
+            foregroundRes = R.drawable.ic_launcher_foreground_key,
             aliasClassName = mainActivityName + "AliasDefault",
         ),
         BuiltinAppIcon(
@@ -49,7 +57,7 @@ object BuiltinAppIcons {
             id = LOGO_ID,
             nameRes = R.string.app_icon_builtin_logo,
             iconRes = R.mipmap.ic_launcher_logo,
-            foregroundRes = R.drawable.ic_launcher_foreground_logo,
+            foregroundRes = R.drawable.ic_launcher_foreground,
             aliasClassName = mainActivityName + "AliasLogo",
         ),
         BuiltinAppIcon(
@@ -58,6 +66,55 @@ object BuiltinAppIcons {
             iconRes = R.mipmap.ic_launcher_zako,
             foregroundRes = R.drawable.ic_launcher_foreground_zako,
             aliasClassName = mainActivityName + "AliasZako",
+        ),
+        BuiltinAppIcon(
+            id = ARIS_ID,
+            nameRes = R.string.app_icon_builtin_aris,
+            iconRes = R.mipmap.ic_launcher_aris,
+            foregroundRes = R.drawable.ic_launcher_foreground_aris,
+            aliasClassName = mainActivityName + "AliasAris",
+        ),
+        BuiltinAppIcon(
+            id = ARONA_ID,
+            nameRes = R.string.app_icon_builtin_arona,
+            iconRes = R.mipmap.ic_launcher_arona,
+            foregroundRes = R.drawable.ic_launcher_foreground_arona,
+            aliasClassName = mainActivityName + "AliasArona",
+        ),
+        BuiltinAppIcon(
+            id = SHIROKO_ID,
+            nameRes = R.string.app_icon_builtin_shiroko,
+            iconRes = R.mipmap.ic_launcher_shiroko,
+            foregroundRes = R.drawable.ic_launcher_foreground_shiroko,
+            aliasClassName = mainActivityName + "AliasShiroko",
+        ),
+        BuiltinAppIcon(
+            id = HINA_ID,
+            nameRes = R.string.app_icon_builtin_hina,
+            iconRes = R.mipmap.ic_launcher_hina,
+            foregroundRes = R.drawable.ic_launcher_foreground_hina,
+            aliasClassName = mainActivityName + "AliasHina",
+        ),
+        BuiltinAppIcon(
+            id = PLANA_ID,
+            nameRes = R.string.app_icon_builtin_plana,
+            iconRes = R.mipmap.ic_launcher_plana,
+            foregroundRes = R.drawable.ic_launcher_foreground_plana,
+            aliasClassName = mainActivityName + "AliasPlana",
+        ),
+        BuiltinAppIcon(
+            id = HOSHINO_ID,
+            nameRes = R.string.app_icon_builtin_hoshino,
+            iconRes = R.mipmap.ic_launcher_hoshino,
+            foregroundRes = R.drawable.ic_launcher_foreground_hoshino,
+            aliasClassName = mainActivityName + "AliasHoshino",
+        ),
+        BuiltinAppIcon(
+            id = SLEEPYGPT_ID,
+            nameRes = R.string.app_icon_builtin_sleepy_gpt,
+            iconRes = R.mipmap.ic_launcher_sleepy_gpt,
+            foregroundRes = R.drawable.ic_launcher_foreground_sleepy_gpt,
+            aliasClassName = mainActivityName + "AliasSleepyGpt",
         ),
     )
 
@@ -104,6 +161,14 @@ object BuiltinAppIcons {
         KERNELSU_ID -> ""
         LOGO_ID -> "Logo"
         ZAKO_ID -> "Zako"
+        ARIS_ID -> "Aris"
+        ARONA_ID -> "Arona"
+        SHIROKO_ID -> "Shiroko"
+        KEY_ID -> "Key"
+        HINA_ID -> "Hina"
+        PLANA_ID -> "Plana"
+        HOSHINO_ID -> "Hoshino"
+        SLEEPYGPT_ID -> "SleepyGpt"
         else -> "Default"
     }
 

@@ -1270,9 +1270,9 @@
     <string name="theme_store_source_unnamed">未命名镜像源</string>
     <string name="theme_store_source_invalid">地址无效</string>
     <string name="app_icon_builtin_section">内置图标</string>
-    <string name="app_icon_builtin_default">Sukigisk</string>
+    <string name="app_icon_builtin_default">Sukigisk(凯伊)</string>
     <string name="app_icon_builtin_kernelsu">KernelSU</string>
-    <string name="app_icon_builtin_logo">Sukigisk 标志</string>
+    <string name="app_icon_builtin_logo">SukiSU</string>
     <string name="app_icon_import_title">导入图标包</string>
     <string name="app_icon_import_summary">支持包含 PNG、WebP 或 JPG 图标的 ZIP 压缩包</string>
     <string name="app_icon_import_button">导入</string>
@@ -1290,7 +1290,15 @@
     <string name="app_icon_delete_pack_failed">无法删除图标包</string>
     <string name="app_icon_empty_custom">还没有自定义图标</string>
     <string name="app_icon_empty_custom_summary">导入 ZIP 压缩包即可添加自己的图标</string>
-    <string name="app_icon_builtin_zako">Sukigisk 线稿</string>
+    <string name="app_icon_builtin_zako">SukiSU线稿</string>
+    <string name="app_icon_builtin_aris">爱丽丝</string>
+    <string name="app_icon_builtin_arona">阿罗娜</string>
+    <string name="app_icon_builtin_shiroko">白子</string>
+    <string name="app_icon_builtin_key">凯伊</string>
+    <string name="app_icon_builtin_hina">日奈</string>
+    <string name="app_icon_builtin_plana">普拉娜</string>
+    <string name="app_icon_builtin_hoshino">星野</string>
+    <string name="app_icon_builtin_sleepy_gpt">睡觉的GPT</string>
     <string name="app_icon_dynamic_color_title">动态取色</string>
     <string name="app_icon_dynamic_color_summary">允许支持的桌面根据壁纸颜色调整图标（Android 13+）</string>
     <string name="app_icon_selected">当前</string>
@@ -1654,5 +1662,5 @@
     <string name="settings_boot_patch">修补 boot 镜像</string>
     <string name="settings_boot_patch_summary">选择 boot.img，用 Magisk 修补后输出到 Download</string>
     
-    <string name="about_description"> Sukigisk是SukiSU和Magisk的嫁接产物，目标是在不损失功能与可用性的前提下，替代 Magisk\n\n* 复用SukiSU 前端页面，因此兼容所有SukiSU 主题\n* 底层后端还是Magisk，因此兼容所有Magisk模块\n* 用好看的界面做你熟悉的事\n\nGitHub:www.github.com/AppleMac13/Sukigisk\n\n注意：\n非官方移植项目，与Magisk团队、topjohnwu个人、SukiSU团队、ShirkNeko个人无任何关系</string>
+    <string name="about_description"> Sukigisk是SukiSU和Magisk的嫁接产物，目标是在不损失功能与可用性的前提下，替代 Magisk\n\n* 复用SukiSU 前端页面，因此兼容所有SukiSU 主题\n* 底层后端还是Magisk，因此兼容所有Magisk模块\n* 用好看的界面做你熟悉的事\n\nGitHub:www.github.com/AppleMac13/Sukigisk\n\n注意：\n非官方移植项目，与Magisk团队、topjohnwu个人、SukiSU团队、ShirkNeko个人无任何关系\n\n后端Magisk版本:31.1</string>
 </resources>

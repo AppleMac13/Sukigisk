@@ -1274,9 +1274,9 @@
     <string name="theme_store_source_unnamed">Unnamed source</string>
     <string name="theme_store_source_invalid">Invalid address</string>
     <string name="app_icon_builtin_section">Built-in icons</string>
-    <string name="app_icon_builtin_default">Sukigisk</string>
+    <string name="app_icon_builtin_default">Sukigisk (Key)</string>
     <string name="app_icon_builtin_kernelsu">KernelSU</string>
-    <string name="app_icon_builtin_logo">Sukigisk Logo</string>
+    <string name="app_icon_builtin_logo">SukiSU</string>
     <string name="app_icon_import_title">Import icon pack</string>
     <string name="app_icon_import_summary">Import a ZIP archive containing PNG, WebP or JPG icons</string>
     <string name="app_icon_import_button">Import</string>
@@ -1294,7 +1294,15 @@
     <string name="app_icon_delete_pack_failed">Could not delete the icon pack</string>
     <string name="app_icon_empty_custom">No custom icons yet</string>
     <string name="app_icon_empty_custom_summary">Import a ZIP archive to add your own icons</string>
-    <string name="app_icon_builtin_zako">Sukigisk Line Art</string>
+    <string name="app_icon_builtin_zako">SukiSU Line Art</string>
+    <string name="app_icon_builtin_aris">Aris</string>
+    <string name="app_icon_builtin_arona">Arona</string>
+    <string name="app_icon_builtin_shiroko">Shiroko</string>
+    <string name="app_icon_builtin_key">Key</string>
+    <string name="app_icon_builtin_hina">Hina</string>
+    <string name="app_icon_builtin_plana">Plana</string>
+    <string name="app_icon_builtin_hoshino">Hoshino</string>
+    <string name="app_icon_builtin_sleepy_gpt">Sleepy GPT</string>
     <string name="app_icon_dynamic_color_title">Dynamic color</string>
     <string name="app_icon_dynamic_color_summary">Allow supported launchers to tint the icon with wallpaper colors (Android 13+)</string>
     <string name="app_icon_selected">Selected</string>
@@ -1664,5 +1672,5 @@
     <string name="settings_boot_patch">Patch boot image</string>
     <string name="settings_boot_patch_summary">Pick a boot.img and patch it with Magisk; the result is written to Download</string>
     
-    <string name="about_description">Sukigisk is a graft of the SukiSU frontend and the Magisk backend, aiming to replace Magisk without losing features or usability.\n\n* Reuses the SukiSU frontend, so every SukiSU theme works.\n* The backend is still Magisk, so every Magisk module works.\n* Familiar tasks with a better-looking interface.\n\nGitHub:www.github.com/AppleMac13/Sukigisk\n\nNote: an unofficial port. It has no affiliation with the Magisk team, topjohnwu, the SukiSU team, or ShirkNeko.</string>
+    <string name="about_description">Sukigisk is a graft of the SukiSU frontend and the Magisk backend, aiming to replace Magisk without losing features or usability.\n\n* Reuses the SukiSU frontend, so every SukiSU theme works.\n* The backend is still Magisk, so every Magisk module works.\n* Familiar tasks with a better-looking interface.\n\nGitHub:www.github.com/AppleMac13/Sukigisk\n\nNote: an unofficial port. It has no affiliation with the Magisk team, topjohnwu, the SukiSU team, or ShirkNeko.\n\nBackend Magisk version: 31.1</string>
 </resources>
