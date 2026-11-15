@@ -32,6 +32,7 @@ object BuiltinAppIcons {
     const val KEY_ID = "key"
     const val HINA_ID = "hina"
     const val PLANA_ID = "plana"
+    const val PLANA_GRIMACE_ID = "plana_grimace"
     const val HOSHINO_ID = "hoshino"
     const val SLEEPYGPT_ID = "sleepy_gpt"
 
@@ -103,6 +104,13 @@ object BuiltinAppIcons {
             aliasClassName = mainActivityName + "AliasPlana",
         ),
         BuiltinAppIcon(
+            id = PLANA_GRIMACE_ID,
+            nameRes = R.string.app_icon_builtin_plana_grimace,
+            iconRes = R.mipmap.ic_launcher_plana_grimace,
+            foregroundRes = R.drawable.ic_launcher_foreground_plana_grimace,
+            aliasClassName = mainActivityName + "AliasPlanaGrimace",
+        ),
+        BuiltinAppIcon(
             id = HOSHINO_ID,
             nameRes = R.string.app_icon_builtin_hoshino,
             iconRes = R.mipmap.ic_launcher_hoshino,
@@ -167,6 +175,7 @@ object BuiltinAppIcons {
         KEY_ID -> "Key"
         HINA_ID -> "Hina"
         PLANA_ID -> "Plana"
+        PLANA_GRIMACE_ID -> "PlanaGrimace"
         HOSHINO_ID -> "Hoshino"
         SLEEPYGPT_ID -> "SleepyGpt"
         else -> "Default"

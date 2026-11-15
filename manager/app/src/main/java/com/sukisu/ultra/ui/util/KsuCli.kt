@@ -49,6 +49,17 @@ fun getKsuDaemonPath(): String {
     return ksuApp.applicationInfo.nativeLibraryDir + File.separator + "libmagisk.so"
 }
 
+fun suBinaryPath(): String {
+    val candidates = listOf(
+        "/debug_ramdisk/su",
+        "/system/bin/su",
+        "/system/xbin/su",
+        "/sbin/su",
+        "/data/adb/ksu/bin/su",
+    )
+    return candidates.firstOrNull { File(it).canExecute() } ?: "su"
+}
+
 data class FlashResult(val code: Int, val err: String, val showReboot: Boolean, val outputFile: File? = null) {
     constructor(result: Shell.Result, showReboot: Boolean) : this(result.code, result.err.joinToString("\n"), showReboot)
     constructor(result: Shell.Result) : this(result, result.isSuccess)
@@ -90,17 +101,17 @@ fun createRootShell(globalMnt: Boolean = false): Shell {
     val builder = Shell.Builder.create()
     return try {
         if (globalMnt) {
-            builder.build(getKsuDaemonPath(), "debug", "su", "-g")
+            builder.build(getKsuDaemonPath(), "su", "-mm")
         } else {
-            builder.build(getKsuDaemonPath(), "debug", "su")
+            builder.build(getKsuDaemonPath(), "su")
         }
     } catch (e: Throwable) {
         Log.w(TAG, "ksu failed: ", e)
         try {
             if (globalMnt) {
-                builder.build("su", "-mm")
+                builder.build(suBinaryPath(), "-mm")
             } else {
-                builder.build("su")
+                builder.build(suBinaryPath())
             }
         } catch (e: Throwable) {
             Log.e(TAG, "su failed: ", e)

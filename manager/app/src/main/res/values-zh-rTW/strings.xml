@@ -660,6 +660,7 @@
     <string name="app_icon_builtin_key">凱伊</string>
     <string name="app_icon_builtin_hina">日奈</string>
     <string name="app_icon_builtin_plana">普拉娜</string>
+    <string name="app_icon_builtin_plana_grimace">做鬼脸的普拉娜</string>
     <string name="app_icon_builtin_hoshino">星野</string>
     <string name="app_icon_builtin_sleepy_gpt">睡覺的GPT</string>
     <string name="app_icon_dynamic_color_title">動態取色</string>

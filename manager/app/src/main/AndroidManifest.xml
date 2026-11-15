@@ -738,6 +738,30 @@
             </intent-filter>
         </activity-alias>
 
+        <activity-alias
+            android:name=".ui.MainActivityAliasPlanaGrimace"
+            android:targetActivity=".ui.MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_plana_grimace_sq">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".ui.MainActivityAliasPlanaGrimaceStatic"
+            android:targetActivity=".ui.MainActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_launcher_plana_grimace_sq">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
     </application>
 
 </manifest>

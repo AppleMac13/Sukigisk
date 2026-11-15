@@ -9,6 +9,7 @@ import com.sukisu.ultra.ui.kernelFlash.util.KpmTools
 import com.sukisu.ultra.ui.util.getRootShell
 import com.sukisu.ultra.ui.util.install
 import com.sukisu.ultra.ui.util.rootAvailable
+import com.sukisu.ultra.ui.util.suBinaryPath
 import com.topjohnwu.superuser.ShellUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -337,7 +338,7 @@ class HorizonKernelWorker(
     }
 
     private fun flash() {
-        val process = ProcessBuilder("su")
+        val process = ProcessBuilder(suBinaryPath())
             .redirectErrorStream(true)
             .start()
 
@@ -400,7 +401,7 @@ class HorizonKernelWorker(
 
     private fun runCommand(su: Boolean, cmd: String): Int? {
         return try {
-            val process = ProcessBuilder(if (su) "su" else "sh", "-c", cmd)
+            val process = ProcessBuilder(if (su) suBinaryPath() else "sh", "-c", cmd)
                 .redirectErrorStream(true)
                 .start()
             try {

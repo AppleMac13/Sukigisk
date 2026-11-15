@@ -33,3 +33,8 @@ desktop.ini
 sign.properties
 *.jks
 *.keystore
+
+# local edit backups
+*.bak
+*.bak2
+*.bak3

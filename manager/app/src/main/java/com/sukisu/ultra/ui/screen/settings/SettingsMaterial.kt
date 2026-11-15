@@ -213,27 +213,7 @@ fun SettingPagerMaterial(
             )
             }
 
-            val profileTemplate = customText(CustomTextKey.PAGE_TEMPLATE)
             KsuIsValid {
-                SettingsAnchor(SettingsSection.PROFILE_TEMPLATES, anchorRequesters) {
-                SegmentedColumn(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
-                    content = listOf {
-                        SegmentedListItem(
-                            onClick = actions.onOpenProfileTemplate,
-                            headlineContent = { Text(profileTemplate) },
-                            supportingContent = { Text(stringResource(id = R.string.settings_profile_template_summary)) },
-                            leadingContent = { IconTile(Icons.Filled.Description, profileTemplate) },
-                            trailingContent = {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    null
-                                )
-                            }
-                        )
-                    }
-                )
-                }
                 if (BackendCompat.supportsKernelExtensions) {
                 SettingsAnchor(SettingsSection.EXTENSIONS, anchorRequesters) {
                 SegmentedColumn(
@@ -290,166 +270,10 @@ fun SettingPagerMaterial(
                     stringResource(id = R.string.settings_mode_disable_always),
                 )
 
-                SettingsAnchor(SettingsSection.SECURITY, anchorRequesters) {
-                SegmentedColumn(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
-                    content = listOf(
-                        {
-                            val suSummary = when (uiState.suCompatStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_sucompat_summary)
-                            }
-                            SegmentedDropdownItem(
-                                icon = Icons.Filled.AdminPanelSettings,
-                                title = customText(CustomTextKey.SETTING_SUCOMPAT),
-                                summary = suSummary,
-                                items = suCompatModeItems,
-                                enabled = uiState.suCompatStatus == "supported",
-                                selectedIndex = uiState.suCompatMode,
-                                onItemSelected = actions.onSetSuCompatMode
-                            )
-                        },
-                        {
-                            val umountSummary = when (uiState.kernelUmountStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_kernel_umount_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.LayersClear,
-                                title = customText(CustomTextKey.SETTING_KERNEL_UMOUNT),
-                                summary = umountSummary,
-                                enabled = uiState.kernelUmountStatus == "supported",
-                                checked = uiState.isKernelUmountEnabled,
-                                onCheckedChange = actions.onSetKernelUmountEnabled
-                            )
-                        },
-                        {
-                            val selinuxHideSummary = when (uiState.selinuxHideStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_selinux_hide_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.Security,
-                                title = customText(CustomTextKey.SETTING_SELINUX_HIDE),
-                                summary = selinuxHideSummary,
-                                enabled = uiState.selinuxHideStatus == "supported",
-                                checked = uiState.isSelinuxHideEnabled,
-                                onCheckedChange = actions.onSetSelinuxHideEnabled
-                            )
-                        },
-                        {
-                            val summary = when (uiState.avcSpoofStatus) {
-                                "unsupported" -> stringResource(R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(R.string.feature_status_forced_summary)
-                                else -> stringResource(R.string.settings_avc_spoof_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.Security,
-                                title = customText(CustomTextKey.SETTING_AVC_SPOOF),
-                                summary = summary,
-                                enabled = uiState.avcSpoofStatus == "supported",
-                                checked = uiState.isAvcSpoofEnabled,
-                                onCheckedChange = actions.onSetAvcSpoofEnabled
-                            )
-                        },
-                        {
-                            val mountHideSummary = when (uiState.mountHideStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_mount_hide_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.Policy,
-                                title = customText(CustomTextKey.SETTING_MOUNT_HIDE),
-                                summary = mountHideSummary,
-                                enabled = uiState.mountHideStatus == "supported",
-                                checked = uiState.isMountHideEnabled,
-                                onCheckedChange = actions.onSetMountHideEnabled
-                            )
-                        },
-                        {
-                            val sulogSummary = when (uiState.sulogStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_sulog_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.AutoMirrored.Filled.Article,
-                                title = customText(CustomTextKey.SETTING_SULOG),
-                                summary = sulogSummary,
-                                enabled = uiState.sulogStatus == "supported",
-                                checked = uiState.isSulogEnabled,
-                                onCheckedChange = actions.onSetSulogEnabled
-                            )
-                        },
-                        {
-                            val adbRootSummary = when (uiState.adbRootStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_adb_root_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.Adb,
-                                title = customText(CustomTextKey.SETTING_ADB_ROOT),
-                                summary = adbRootSummary,
-                                enabled = uiState.adbRootStatus == "supported",
-                                checked = uiState.isAdbRootEnabled,
-                                onCheckedChange = actions.onSetAdbRootEnabled
-                            )
-                        },
-                        {
-                            val shellSuAdbOnlySummary = when (uiState.shellSuAdbOnlyStatus) {
-                                "unsupported" -> stringResource(id = R.string.feature_status_unsupported_summary)
-                                "managed" -> stringResource(id = R.string.feature_status_managed_summary)
-                                "forced" -> stringResource(id = R.string.feature_status_forced_summary)
-                                else -> stringResource(id = R.string.settings_shell_su_adb_only_summary)
-                            }
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.VerifiedUser,
-                                title = customText(CustomTextKey.SETTING_SHELL_SU),
-                                summary = shellSuAdbOnlySummary,
-                                enabled = uiState.shellSuAdbOnlyStatus == "supported",
-                                checked = uiState.isShellSuAdbOnlyEnabled,
-                                onCheckedChange = actions.onSetShellSuAdbOnlyEnabled
-                            )
-                        },
-                        {
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.RestartAlt,
-                                title = customText(CustomTextKey.SETTING_SOFT_REBOOT),
-                                summary = stringResource(id = R.string.settings_soft_reboot_summary),
-                                enabled = !uiState.isLateLoadMode,
-                                checked = uiState.isLateLoadMode || uiState.useSoftReboot,
-                                onCheckedChange = actions.onSetUseSoftReboot
-                            )
-                        },
-                    )
-                )
-
-                }
                 SettingsAnchor(SettingsSection.MODULE_BEHAVIOUR, anchorRequesters) {
                 SegmentedColumn(
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 13.dp),
                     content = listOf(
-                        {
-                            SegmentedSwitchItem(
-                                icon = Icons.AutoMirrored.Filled.Rule,
-                                title = customText(CustomTextKey.SETTING_UMOUNT_MODULES_DEFAULT),
-                                summary = stringResource(id = R.string.settings_umount_modules_default_summary),
-                                checked = uiState.isDefaultUmountModules,
-                                onCheckedChange = actions.onSetDefaultUmountModules
-                            )
-                        },
                         {
                             SegmentedSwitchItem(
                                 icon = Icons.Filled.Delete,
@@ -468,25 +292,6 @@ fun SettingPagerMaterial(
                                 onCheckedChange = actions.onSetAutoDeleteUpdateApk
                             )
                         },
-                        {
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.DeveloperMode,
-                                title = customText(CustomTextKey.SETTING_WEB_DEBUGGING),
-                                summary = stringResource(id = R.string.enable_web_debugging_summary),
-                                checked = uiState.enableWebDebugging,
-                                onCheckedChange = actions.onSetEnableWebDebugging
-                            )
-                        },
-                        {
-                            SegmentedSwitchItem(
-                                icon = Icons.Filled.FlashOn,
-                                title = customText(CustomTextKey.SETTING_AUTO_JAILBREAK),
-                                summary = stringResource(id = R.string.settings_auto_jailbreak_summary),
-                                enabled = uiState.isLateLoadMode,
-                                checked = uiState.autoJailbreak,
-                                onCheckedChange = actions.onSetAutoJailbreak
-                            )
-                        }
                     )
                 )
                 }

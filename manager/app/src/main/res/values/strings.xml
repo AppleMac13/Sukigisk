@@ -1301,6 +1301,7 @@
     <string name="app_icon_builtin_key">Key</string>
     <string name="app_icon_builtin_hina">Hina</string>
     <string name="app_icon_builtin_plana">Plana</string>
+    <string name="app_icon_builtin_plana_grimace">做鬼脸的普拉娜</string>
     <string name="app_icon_builtin_hoshino">Hoshino</string>
     <string name="app_icon_builtin_sleepy_gpt">Sleepy GPT</string>
     <string name="app_icon_dynamic_color_title">Dynamic color</string>
