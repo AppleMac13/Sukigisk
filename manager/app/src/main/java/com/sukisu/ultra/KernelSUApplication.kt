@@ -118,6 +118,13 @@ class KernelSUApplication : Application(), ViewModelStoreOwner {
                             .header("Accept-Language", Locale.getDefault().toLanguageTag()).build()
                     )
                 }.build()
+
+        // Android 17 去掉了 init.environ.rc，/system/bin/su 不再存在；有 root 时自动补一个模块
+        if (File(com.sukisu.ultra.ui.util.suBinaryPath()).canExecute()) {
+            Thread {
+                runCatching { kotlinx.coroutines.runBlocking { com.sukisu.ultra.ui.util.ensureLegacySuPaths() } }
+            }.start()
+        }
     }
 
     override val viewModelStore: ViewModelStore

@@ -51,6 +51,7 @@ fun getKsuDaemonPath(): String {
 
 fun suBinaryPath(): String {
     val candidates = listOf(
+        "/product/bin/su",
         "/debug_ramdisk/su",
         "/system/bin/su",
         "/system/xbin/su",
@@ -1461,4 +1462,46 @@ suspend fun getDynamicManagerSignature(apkPath: String): DynamicManagerSignature
 
 suspend fun addDynamicManager(packageName: String, signature: DynamicManagerSignature) {
     runDynamicManagerCommand("manager", "add", packageName, signature.certSize.toString(), signature.hash)
+}
+
+private const val SU_FIX_MODULE_ID = "su_path_fix"
+
+/**
+ * Android 17 移除了 init.environ.rc，系统不再在 /system/bin、/system/xbin 暴露 su，
+ * 只认这些老路径的应用会把已 root 的设备判定成未 root。
+ * 拿到 root 后自动补一个模块，把这几个路径补齐（等价于手工刷 SU Path Fix）。
+ */
+suspend fun ensureLegacySuPaths(): Boolean = withContext(Dispatchers.IO) {
+    val script = """
+        MOD=/data/adb/modules/$SU_FIX_MODULE_ID
+        [ -x /system/bin/su ] && exit 0
+        SRC=""
+        for c in /data/adb/magisk/magisk /debug_ramdisk/magisk /debug_ramdisk/su; do
+            if [ -x "${'$'}c" ]; then SRC="${'$'}c"; break; fi
+        done
+        [ -n "${'$'}SRC" ] || exit 2
+        rm -rf "${'$'}MOD"
+        mkdir -p "${'$'}MOD/system/bin"
+        cp -f "${'$'}SRC" "${'$'}MOD/system/bin/su"
+        chmod 755 "${'$'}MOD/system/bin/su"
+        {
+          echo 'id=su_path_fix'
+          echo 'name=SU Path Fix (Android 17)'
+          echo 'version=v1.0'
+          echo 'versionCode=1'
+          echo 'author=Sukigisk'
+          echo 'description=Restore /system/bin/su so apps can resolve su on Android 17 (init.environ.rc removed)'
+        } > "${'$'}MOD/module.prop"
+        chown 0:0 "${'$'}MOD/module.prop" "${'$'}MOD/system/bin/su"
+        echo SU_PATH_FIX_OK
+    """.trimIndent()
+
+    val result = runCatching { runCmd(getRootShell(), script) }.getOrNull()
+    if (result == null) {
+        Log.i(TAG, "legacy su path fix: root shell unavailable")
+        return@withContext false
+    }
+    val ok = result.contains("SU_PATH_FIX_OK")
+    Log.i(TAG, "legacy su path fix: ${if (ok) "installed" else "not installed"} ${result.trim()}")
+    ok
 }
