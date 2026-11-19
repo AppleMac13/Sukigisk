@@ -53,10 +53,10 @@ fun suBinaryPath(): String {
     val candidates = listOf(
         "/product/bin/su",
         "/debug_ramdisk/su",
+        "/data/adb/ksu/bin/su",
         "/system/bin/su",
         "/system/xbin/su",
         "/sbin/su",
-        "/data/adb/ksu/bin/su",
     )
     return candidates.firstOrNull { File(it).canExecute() } ?: "su"
 }
@@ -99,26 +99,37 @@ fun Uri.getFileName(context: Context): String? = runCatching {
 
 fun createRootShell(globalMnt: Boolean = false): Shell {
     Shell.enableVerboseLogging = BuildConfig.DEBUG
+    // 1. 不能走 libmagisk.so + "su" 的 applet 形式：magisk 只认 argv[0] 名为 su，
+    //    从 lib 目录 exec 会直接报 Unrecognized argument: su。
+    // 2. 直接 exec su 拿交互 shell 时，magisk 在没有 tty 的情况下会让 libsu 的
+    //    shellCheck 判定失败（NoShellException），所以显式用 `su -c sh` 起一个 sh。
+    // 3. 冷启动第一次请求可能碰上 magiskd 还没就绪，失败要重试几次，否则整个进程
+    //    会永久退回非 root 的 sh。
+    val su = suBinaryPath()
+    repeat(3) { attempt ->
+        val builder = Shell.Builder.create()
+        try {
+            return if (globalMnt) {
+                builder.build(su, "-mm", "-c", "sh")
+            } else {
+                builder.build(su, "-c", "sh")
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "su attempt ${attempt + 1} failed", e)
+            runCatching { Thread.sleep(400) }
+        }
+    }
     val builder = Shell.Builder.create()
-    return try {
-        if (globalMnt) {
+    try {
+        return if (globalMnt) {
             builder.build(getKsuDaemonPath(), "su", "-mm")
         } else {
             builder.build(getKsuDaemonPath(), "su")
         }
     } catch (e: Throwable) {
-        Log.w(TAG, "ksu failed: ", e)
-        try {
-            if (globalMnt) {
-                builder.build(suBinaryPath(), "-mm")
-            } else {
-                builder.build(suBinaryPath())
-            }
-        } catch (e: Throwable) {
-            Log.e(TAG, "su failed: ", e)
-            builder.build("sh")
-        }
+        Log.e(TAG, "ksu failed: ", e)
     }
+    return Shell.Builder.create().build("sh")
 }
 
 fun execKsud(args: String, newShell: Boolean = false, globalMnt: Boolean = false): Boolean {
@@ -993,8 +1004,17 @@ fun reboot(reason: String = "") {
 }
 
 fun rootAvailable(): Boolean {
-    val shell = getRootShell()
-    return shell.isRoot
+    if (getRootShell().isRoot) return true
+    // libsu 的 isRoot 是建 shell 时探出来的，遇到 magisk 的非标准 su 会误判成 false。
+    // 这里直接用绝对路径的 su 跑一次 id -u 复核，避免明明有 root 却显示「获取 Root 失败」。
+    return runCatching {
+        val process = ProcessBuilder(suBinaryPath(), "-c", "id -u")
+            .redirectErrorStream(true)
+            .start()
+        val out = process.inputStream.bufferedReader().use { it.readText() }
+        process.waitFor(5, TimeUnit.SECONDS)
+        out.trim().startsWith("0") || out.contains("uid=0")
+    }.getOrDefault(false)
 }
 
 suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
@@ -1469,30 +1489,31 @@ private const val SU_FIX_MODULE_ID = "su_path_fix"
 /**
  * Android 17 移除了 init.environ.rc，系统不再在 /system/bin、/system/xbin 暴露 su，
  * 只认这些老路径的应用会把已 root 的设备判定成未 root。
- * 拿到 root 后自动补一个模块，把这几个路径补齐（等价于手工刷 SU Path Fix）。
+ * 拿到 root 后自动补一个模块，把 /system/bin/su 软链到 magisk 真正挂出来的入口。
+ * 必须用软链：裸拷贝的 su 会被 magiskd 拒绝（Broken pipe / Access denied）。
  */
 suspend fun ensureLegacySuPaths(): Boolean = withContext(Dispatchers.IO) {
     val script = """
+        echo "PROBE_UID=${'$'}(id -u) PROBE_SHELL=${'$'}0"
         MOD=/data/adb/modules/$SU_FIX_MODULE_ID
-        [ -x /system/bin/su ] && exit 0
-        SRC=""
-        for c in /data/adb/magisk/magisk /debug_ramdisk/magisk /debug_ramdisk/su; do
-            if [ -x "${'$'}c" ]; then SRC="${'$'}c"; break; fi
-        done
-        [ -n "${'$'}SRC" ] || exit 2
+        TARGET=/product/bin/su
+        [ -x "${'$'}TARGET" ] || TARGET=/debug_ramdisk/su
+        [ -x "${'$'}TARGET" ] || exit 2
+        if [ -L "${'$'}MOD/system/bin/su" ] && [ "${'$'}(readlink "${'$'}MOD/system/bin/su")" = "${'$'}TARGET" ]; then
+            exit 0
+        fi
         rm -rf "${'$'}MOD"
         mkdir -p "${'$'}MOD/system/bin"
-        cp -f "${'$'}SRC" "${'$'}MOD/system/bin/su"
-        chmod 755 "${'$'}MOD/system/bin/su"
+        ln -sf "${'$'}TARGET" "${'$'}MOD/system/bin/su"
         {
           echo 'id=su_path_fix'
           echo 'name=SU Path Fix (Android 17)'
-          echo 'version=v1.0'
-          echo 'versionCode=1'
-          echo 'author=Sukigisk'
+          echo 'version=v1.1'
+          echo 'versionCode=2'
+          echo 'author=AppleMac13'
           echo 'description=Restore /system/bin/su so apps can resolve su on Android 17 (init.environ.rc removed)'
         } > "${'$'}MOD/module.prop"
-        chown 0:0 "${'$'}MOD/module.prop" "${'$'}MOD/system/bin/su"
+        chown 0:0 "${'$'}MOD/module.prop"
         echo SU_PATH_FIX_OK
     """.trimIndent()
 
