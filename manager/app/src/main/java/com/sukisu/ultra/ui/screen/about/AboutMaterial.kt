@@ -54,7 +54,14 @@ import com.sukisu.ultra.ui.component.material.expressiveTopAppBarColors
 import com.sukisu.ultra.ui.screen.appicon.BuiltinAppIconPreview
 
 private const val GITHUB_URL = "https://github.com/AppleMac13/Sukigisk"
-private const val GITHUB_DISPLAY = "www.github.com/AppleMac13/Sukigisk"
+private const val GITHUB_DISPLAY = "https://github.com/AppleMac13/Sukigisk"
+
+/** 关于页描述里需要变成可点链接的文本 -> 真实地址。 */
+private val ABOUT_LINKS = listOf(
+    "www.github.com/topjohnwu/magisk" to "https://github.com/topjohnwu/magisk",
+    "https://github.com/SukiSU-Nova/SukiSU-Nova" to "https://github.com/SukiSU-Nova/SukiSU-Nova",
+    GITHUB_DISPLAY to GITHUB_URL,
+)
 
 @Composable
 fun AboutScreenMaterial(
@@ -149,12 +156,20 @@ fun AboutScreenMaterial(
                     Text(
                         text = buildAnnotatedString {
                             val desc = state.description
-                            val at = desc.indexOf(GITHUB_DISPLAY)
-                            if (at >= 0) {
-                                append(desc.substring(0, at))
+                            var cursor = 0
+                            while (cursor < desc.length) {
+                                val hit = ABOUT_LINKS
+                                    .map { (label, url) -> Triple(label, url, desc.indexOf(label, cursor)) }
+                                    .filter { it.third >= 0 }
+                                    .minByOrNull { it.third }
+                                if (hit == null) {
+                                    append(desc.substring(cursor))
+                                    break
+                                }
+                                append(desc.substring(cursor, hit.third))
                                 withLink(
                                     LinkAnnotation.Url(
-                                        GITHUB_URL,
+                                        hit.second,
                                         TextLinkStyles(
                                             SpanStyle(
                                                 color = MaterialTheme.colorScheme.primary,
@@ -162,10 +177,8 @@ fun AboutScreenMaterial(
                                             )
                                         )
                                     )
-                                ) { append(GITHUB_DISPLAY) }
-                                append(desc.substring(at + GITHUB_DISPLAY.length))
-                            } else {
-                                append(desc)
+                                ) { append(hit.first) }
+                                cursor = hit.third + hit.first.length
                             }
                         },
                         style = MaterialTheme.typography.bodyMedium,

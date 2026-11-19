@@ -28,7 +28,7 @@ data class SuperUserUiState(
     val userIds: List<Int> = emptyList(),
     val searchStatus: SearchStatus = SearchStatus(""),
     val searchResults: List<GroupedApps> = emptyList(),
-    val showSystemApps: Boolean = false,
+    val showSystemApps: Boolean = com.sukisu.ultra.ui.util.isMagiskRuntime(),
     val showOnlyPrimaryUserApps: Boolean = false,
     val sortConfig: AppSortConfig = AppSortConfig(),
     val error: Throwable? = null

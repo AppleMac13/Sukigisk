@@ -430,24 +430,33 @@ fun isMagiskRuntime(): Boolean = magiskRuntime ?: runCatching {
     Natives.getHookType().contains("magisk", ignoreCase = true)
 }.getOrDefault(false).also { magiskRuntime = it }
 
-/** 读 magisk 的 su 授权表：uid -> policy（2 = 允许）。 */
+/** 读 magisk 的 su 授权表：uid -> policy（2 = 允许）。直接让 magisk 查，避免拷贝 WAL 库拿到坏快照。 */
 fun magiskPolicyMap(): Map<Int, Int> {
-    val cache = java.io.File(ksuApp.cacheDir, "magisk_policies.db")
-    val dumped = runSu("cat /data/adb/magisk.db > '${cache.absolutePath}' && echo DB_OK")
-    if (!dumped.contains("DB_OK")) return emptyMap()
-    return runCatching {
-        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
-            cache.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-        )
-        db.use { d ->
-            val map = HashMap<Int, Int>()
-            d.rawQuery("select uid,policy from policies", null).use { c ->
-                while (c.moveToNext()) map[c.getInt(0)] = c.getInt(1)
-            }
-            map
+    val now = android.os.SystemClock.elapsedRealtime()
+    val cached = policyCache
+    if (cached != null && now - policyCacheAt < 5_000L) return cached
+    val out = runSu(
+        "M=/debug_ramdisk/magisk; [ -x ${'$'}M ] || M=/data/adb/magisk/magisk; " +
+            "${'$'}M --sqlite \"select uid,policy from policies\""
+    )
+    val map = HashMap<Int, Int>()
+    val re = Regex("uid=(\\d+)\\|policy=(\\d+)")
+    out.lineSequence().forEach { line ->
+        re.find(line)?.let { m ->
+            map[m.groupValues[1].toInt()] = m.groupValues[2].toInt()
         }
-    }.getOrDefault(emptyMap())
+    }
+    if (map.isEmpty()) Log.w(TAG, "magisk policy query empty: ${out.take(100)}")
+    policyCache = map
+    policyCacheAt = now
+    return map
 }
+
+@Volatile
+private var policyCache: Map<Int, Int>? = null
+
+@Volatile
+private var policyCacheAt = 0L
 
 /** 写 magisk 的 su 授权表，policy 2 = 允许、0 = 拒绝。 */
 fun setMagiskPolicy(uid: Int, allow: Boolean): Boolean {
@@ -458,6 +467,10 @@ fun setMagiskPolicy(uid: Int, allow: Boolean): Boolean {
     )
     val ok = out.contains("POLICY_OK")
     Log.i(TAG, "magisk policy $uid=$policy -> $ok ${out.take(120)}")
+    if (ok) {
+        policyCache = null
+        policyCacheAt = 0L
+    }
     return ok
 }
 

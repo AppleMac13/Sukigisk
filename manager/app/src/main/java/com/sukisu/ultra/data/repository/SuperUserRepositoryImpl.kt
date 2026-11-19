@@ -88,30 +88,38 @@ class SuperUserRepositoryImpl : SuperUserRepository {
             var packages: List<PackageInfo> = emptyList()
             var idsArray: IntArray = intArrayOf(android.os.Process.myUid() / 100000)
             if (magiskPolicies != null) {
-                // magisk 没有 ksud 的 RootService：直接按 magisk.db 的授权 uid 列表还原应用台账。
+                // magisk 没有 ksud 的 RootService：本地扫全量包（含系统应用），授权状态从 policies 表映射。
+                val full = pm.getInstalledPackages(0)
+                val seenUids = HashSet<Int>()
                 val list = mutableListOf<AppInfo>()
+                for (pi in full) {
+                    val ai = pi.applicationInfo ?: continue
+                    if (ai.uid == WEBVIEW_ZYGOTE_UID) continue
+                    seenUids += ai.uid
+                    list += AppInfo(
+                        label = runCatching { ai.loadLabel(pm).toString() }.getOrDefault(pi.packageName),
+                        packageInfo = pi,
+                        profile = Natives.Profile(pi.packageName, ai.uid, allowSu = magiskPolicies[ai.uid] == 2),
+                    )
+                }
+                // 授权表里有、但包名解析不到的 uid（系统 UID、共享 UID、已卸载残留）也要能看见并管理。
                 for ((uid, policy) in magiskPolicies) {
+                    if (uid in seenUids) continue
                     val pkg = pm.getPackagesForUid(uid)?.firstOrNull()
-                        ?: pm.getNameForUid(uid)?.substringBefore(':')
-                    val pi = pkg?.let { p -> runCatching { pm.getPackageInfo(p, 0) }.getOrNull() }
-                    val label = pi?.applicationInfo
-                        ?.let { ai -> runCatching { ai.loadLabel(pm).toString() }.getOrNull() }
-                        ?: pkg
-                        ?: "uid $uid"
-                    val info = pi ?: PackageInfo().apply {
+                    val placeholder = PackageInfo().apply {
                         packageName = pkg ?: ""
                         applicationInfo = ApplicationInfo(pm.getApplicationInfo("android", 0)).apply {
                             this.uid = uid
                         }
                     }
                     list += AppInfo(
-                        label = label,
-                        packageInfo = info,
+                        label = pkg ?: "uid $uid",
+                        packageInfo = placeholder,
                         profile = Natives.Profile(pkg ?: "uid_$uid", uid, allowSu = policy == 2),
-                        special = pi == null,
+                        special = pkg == null,
                     )
                 }
-                Log.i(TAG, "magisk apps: ${list.size} / policies: ${magiskPolicies.size}")
+                Log.i(TAG, "magisk apps: ${list.size} / packages: ${full.size} / policies: ${magiskPolicies.size}")
                 return@runCatching Pair(list.toList(), idsArray.toList())
             } else {
                 val result = connectKsuService {

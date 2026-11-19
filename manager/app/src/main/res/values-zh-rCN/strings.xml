@@ -1663,5 +1663,5 @@
     <string name="settings_boot_patch">修补 boot 镜像</string>
     <string name="settings_boot_patch_summary">选择 boot.img，用 Magisk 修补后输出到 Download</string>
     
-    <string name="about_description"> Sukigisk是SukiSU和Magisk的嫁接产物，目标是在不损失功能与可用性的前提下，替代 Magisk\n\n* 复用SukiSU 前端页面，因此兼容所有SukiSU 主题\n* 底层后端还是Magisk，因此兼容所有Magisk模块\n* 用好看的界面做你熟悉的事\n\nGitHub:www.github.com/AppleMac13/Sukigisk\n\n注意：\n非官方移植项目，与Magisk团队、topjohnwu个人、SukiSU团队、ShirkNeko个人无任何关系\n\n后端Magisk版本:31.1</string>
+    <string name="about_description">Sukigisk 是 SukiSU 前端与 Magisk 的嫁接产物，目标是在不损失功能与可用性的前提下，替代 Magisk\n\n- 复用 SukiSU 前端页面，兼容全部 SukiSU 主题；\n- 底层后端基于 Magisk 31.1，兼容全部 Magisk 模块；\n\n许可说明：\n- Magisk：GPL-3.0\n- SukiSU 前端代码：按上游许可\n- 内置可选图标：\n  - KernelSU 图标、SukiSU 图标、SukiSU 线稿图标：版权归属各自原作者，本项目仅作为可选素材提供，并不提倡使用，未取得商用/二次分发授权，使用该类图标请自行承担版权相关责任\n  - 其余图标：为本项目自制素材\n\n上游项目:\nMagisk: www.github.com/topjohnwu/magisk\nSukiSU: https://github.com/SukiSU-Nova/SukiSU-Nova\n本项目GitHub地址： https://github.com/AppleMac13/Sukigisk\n\n注意：\n本项目为非官方移植项目，与 Magisk 团队、topjohnwu、SukiSU 团队、ShirkNeko 无任何关联。\n后端 Magisk 版本：31.1</string>
 </resources>
