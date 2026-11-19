@@ -18,6 +18,8 @@ import com.sukisu.ultra.ui.UiMode
 import com.sukisu.ultra.R
 import com.sukisu.ultra.ui.util.getRootShell
 import com.sukisu.ultra.ui.util.getKsuDaemonPath
+import com.sukisu.ultra.ui.util.isMagiskRuntime
+import com.sukisu.ultra.ui.util.setMagiskPolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -32,6 +34,7 @@ object TemporaryRoot {
     }
 
     suspend fun status(uid: Int): String = withContext(Dispatchers.IO) {
+        if (isMagiskRuntime()) return@withContext "none"
         val result = getRootShell().newJob()
             .add("'${getKsuDaemonPath()}' temporary-root status $uid").exec()
         if (result.isSuccess) result.out.lastOrNull()?.trim() ?: "unknown" else "unknown"
@@ -44,6 +47,10 @@ object TemporaryRoot {
         updateLease: Boolean,
         seconds: Long?,
     ): Boolean = withContext(Dispatchers.IO) {
+        // magisk 没有 ksud 的 temporary-root，直接写它自己的 su 授权表。
+        if (isMagiskRuntime()) {
+            return@withContext setMagiskPolicy(profile.currentUid, profile.allowSu)
+        }
         fun quote(value: String) = "'" + value.replace("'", "'\\''") + "'"
         val mode = if (!updateLease) "keep" else seconds?.toString() ?: "permanent"
         val json = profileJson.encodeToString(Natives.Profile.serializer(), profile)

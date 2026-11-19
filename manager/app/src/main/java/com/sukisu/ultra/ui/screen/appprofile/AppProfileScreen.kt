@@ -29,6 +29,7 @@ import com.sukisu.ultra.ui.LocalUiMode
 import com.sukisu.ultra.ui.UiMode
 import com.sukisu.ultra.ui.navigation3.LocalNavigator
 import com.sukisu.ultra.ui.navigation3.Route
+import com.sukisu.ultra.ui.util.currentProfile
 import com.sukisu.ultra.ui.util.forceStopApp
 import com.sukisu.ultra.ui.util.getSepolicy
 import com.sukisu.ultra.ui.util.launchApp
@@ -89,7 +90,7 @@ fun AppProfileScreen(uid: Int) {
     }
 
     val initialProfile = remember(uid, packageName, primaryAppInfo.special) {
-        Natives.getAppProfile(packageName, uid).let {
+        currentProfile(packageName, uid).let {
             if (primaryAppInfo.special) it.copy(allowSu = false) else it
         }.also {
             if (it.allowSu && !primaryAppInfo.special) {
@@ -122,7 +123,7 @@ fun AppProfileScreen(uid: Int) {
         while (true) {
             delay(1000)
             if (!saving && profile.allowSu) {
-                val current = Natives.getAppProfile(packageName, uid)
+                val current = currentProfile(packageName, uid)
                 if (!current.allowSu) {
                     profile = current
                     temporaryEnabled = false
@@ -139,9 +140,9 @@ fun AppProfileScreen(uid: Int) {
             try {
                 val profileToSave = if (primaryAppInfo.special) updatedProfile.copy(allowSu = false) else updatedProfile
                 if (profileToSave.allowSu && profile.allowSu
-                    && !Natives.getAppProfile(packageName, uid).allowSu) {
+                    && !currentProfile(packageName, uid).allowSu) {
                     // Never regrant from a stale editor after ksud has revoked a lease.
-                    profile = Natives.getAppProfile(packageName, uid)
+                    profile = currentProfile(packageName, uid)
                     showMessage(failToUpdateAppProfile)
                     return@launch
                 }
@@ -158,7 +159,7 @@ fun AppProfileScreen(uid: Int) {
                 }
                 if (!TemporaryRoot.saveProfile(profileToSave, profile.allowSu, updateLease, seconds)) {
                     // The watcher may have revoked while the editor was open.
-                    profile = Natives.getAppProfile(packageName, uid)
+                    profile = currentProfile(packageName, uid)
                     temporaryEnabled = TemporaryRoot.status(uid) in listOf("timed", "boot")
                     showMessage(failToUpdateAppProfile)
                 } else {

@@ -372,17 +372,25 @@ class SuperUserViewModel(
         refreshMutex.withLock {
             _uiState.update { it.copy(isRefreshing = true, error = null) }
 
-            loadApps(useCache = false, repo = repo).onSuccess { (newApps, ids) ->
+            // magisk 下不走 loadApps 的共享扫描（那条路径在这里会挂住），直接查仓库。
+            val result = if (com.sukisu.ultra.ui.util.isMagiskRuntime()) {
+                repo.getAppList(force = true)
+            } else {
+                loadApps(useCache = false, repo = repo)
+            }
+            result.onSuccess { (newApps, ids) ->
                 val (cachedGroups, grouped) = withContext(Dispatchers.IO) {
                     val cached = buildCachedGroups(newApps)
                     val umountByUid = cached.associate { it.uid to it.shouldUmount }
                     cached to buildGroups(filterApps(newApps)) { umountByUid[it] ?: Natives.uidShouldUmount(it) }
                 }
+                Log.i("SuperUserVM", "fetch ok: apps=${newApps.size} groups=${grouped.size} ids=$ids")
 
                 updateCachedGroupedApps(cachedGroups)
                 updateVisibleApps(grouped)
                 _uiState.update { it.copy(userIds = ids, isRefreshing = false, hasLoaded = true) }
             }.onFailure { e ->
+                Log.e("SuperUserVM", "fetch failed", e)
                 _uiState.update {
                     it.copy(
                         isRefreshing = false,

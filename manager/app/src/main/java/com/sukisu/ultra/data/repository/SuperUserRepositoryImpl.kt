@@ -26,6 +26,9 @@ import com.sukisu.ultra.data.model.WEBVIEW_ZYGOTE_UID
 import com.sukisu.ultra.ksuApp
 import com.sukisu.ultra.ui.KsuService
 import com.sukisu.ultra.ui.util.KsuCli
+import com.sukisu.ultra.ui.util.isRootAvailable
+import com.sukisu.ultra.ui.util.isMagiskRuntime
+import com.sukisu.ultra.ui.util.magiskPolicyMap
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
@@ -51,7 +54,7 @@ class SuperUserRepositoryImpl : SuperUserRepository {
     )
 
     override suspend fun getAppList(force: Boolean): Result<Pair<List<AppInfo>, List<Int>>> = withContext(Dispatchers.IO) {
-        if (!KsuCli.SHELL.isRoot) {
+        if (!isMagiskRuntime() && !isRootAvailable()) {
             return@withContext Result.failure(IllegalStateException("Root access is required"))
         }
         scanMutex.withLock {
@@ -65,62 +68,107 @@ class SuperUserRepositoryImpl : SuperUserRepository {
                 if (packageGeneration.get() == generation) {
                     cachedScan = AppScan(apps, userIds, locales, generation)
                 }
-            }
+            }.onFailure { Log.e(TAG, "getAppList failed", it) }
         }
     }
 
     private suspend fun scanAppList(): Result<Pair<List<AppInfo>, List<Int>>> = withContext(Dispatchers.IO) {
         runCatching {
-            if (!KsuCli.SHELL.isRoot) {
+            // magisk 模式下本地扫包不需要 root，别被 libsu 的误判卡住。
+            if (!isMagiskRuntime() && !isRootAvailable()) {
                 return@withContext Result.failure(
                     IllegalStateException("Root access is required")
                 )
             }
 
-            val result = connectKsuService {
-                Log.w(TAG, "KsuService disconnected")
-            }
+            val pm = ksuApp.packageManager
+            val start = SystemClock.elapsedRealtime()
+            val magiskPolicies = if (isMagiskRuntime()) magiskPolicyMap() else null
 
-            var currentBinder = result.first
-            var currentConnection = result.second
+            var packages: List<PackageInfo> = emptyList()
+            var idsArray: IntArray = intArrayOf(android.os.Process.myUid() / 100000)
+            if (magiskPolicies != null) {
+                // magisk 没有 ksud 的 RootService：直接按 magisk.db 的授权 uid 列表还原应用台账。
+                val list = mutableListOf<AppInfo>()
+                for ((uid, policy) in magiskPolicies) {
+                    val pkg = pm.getPackagesForUid(uid)?.firstOrNull()
+                        ?: pm.getNameForUid(uid)?.substringBefore(':')
+                    val pi = pkg?.let { p -> runCatching { pm.getPackageInfo(p, 0) }.getOrNull() }
+                    val label = pi?.applicationInfo
+                        ?.let { ai -> runCatching { ai.loadLabel(pm).toString() }.getOrNull() }
+                        ?: pkg
+                        ?: "uid $uid"
+                    val info = pi ?: PackageInfo().apply {
+                        packageName = pkg ?: ""
+                        applicationInfo = ApplicationInfo(pm.getApplicationInfo("android", 0)).apply {
+                            this.uid = uid
+                        }
+                    }
+                    list += AppInfo(
+                        label = label,
+                        packageInfo = info,
+                        profile = Natives.Profile(pkg ?: "uid_$uid", uid, allowSu = policy == 2),
+                        special = pi == null,
+                    )
+                }
+                Log.i(TAG, "magisk apps: ${list.size} / policies: ${magiskPolicies.size}")
+                return@runCatching Pair(list.toList(), idsArray.toList())
+            } else {
+                val result = connectKsuService {
+                    Log.w(TAG, "KsuService disconnected")
+                }
 
-            try {
-                suspend fun reconnect(): IKsuInterface {
-                    withContext(Dispatchers.Main) {
+                var currentBinder = result.first
+                var currentConnection = result.second
+
+                try {
+                    suspend fun reconnect(): IKsuInterface {
+                        withContext(Dispatchers.Main) {
+                            RootService.unbind(currentConnection)
+                        }
+                        val retry = connectKsuService { Log.w(TAG, "KsuService disconnected") }
+                        currentBinder = retry.first
+                        currentConnection = retry.second
+                        return IKsuInterface.Stub.asInterface(currentBinder)
+                    }
+
+                    var iface = IKsuInterface.Stub.asInterface(currentBinder)
+                    idsArray = try {
+                        iface.userIds
+                    } catch (_: Exception) {
+                        iface = reconnect()
+                        iface.userIds
+                    }
+
+                    val slice = try {
+                        iface.getPackages(0)
+                    } catch (_: Exception) {
+                        iface = reconnect()
+                        iface.getPackages(0)
+                    }
+
+                    packages = slice.list
+                } finally {
+                    withContext(NonCancellable + Dispatchers.Main) {
                         RootService.unbind(currentConnection)
                     }
-                    val retry = connectKsuService { Log.w(TAG, "KsuService disconnected") }
-                    currentBinder = retry.first
-                    currentConnection = retry.second
-                    return IKsuInterface.Stub.asInterface(currentBinder)
                 }
-
-                val pm = ksuApp.packageManager
-                val start = SystemClock.elapsedRealtime()
-
-                var iface = IKsuInterface.Stub.asInterface(currentBinder)
-                val idsArray = try {
-                    iface.userIds
-                } catch (_: Exception) {
-                    iface = reconnect()
-                    iface.userIds
-                }
-
-                val slice = try {
-                    iface.getPackages(0)
-                } catch (_: Exception) {
-                    iface = reconnect()
-                    iface.getPackages(0)
-                }
-
-                val packages = slice.list
+            }
                 val newApps = packages.filter {
                     val ai = it.applicationInfo ?: return@filter false
                     ai.uid != WEBVIEW_ZYGOTE_UID &&
                             (ai.flags and ApplicationInfo.FLAG_HAS_CODE) != 0
                 }.map {
                     val appInfo = it.applicationInfo!!
-                    val profile = Natives.getAppProfile(it.packageName, appInfo.uid)
+                    val profile = if (magiskPolicies != null) {
+                        Natives.Profile(
+                            it.packageName,
+                            appInfo.uid,
+                            allowSu = magiskPolicies[appInfo.uid] == 2,
+                        )
+                    } else {
+                        Natives.getAppProfile(it.packageName, appInfo.uid)
+                    }
                     AppInfo(
                         label = appInfo.loadLabel(pm).toString(),
                         packageInfo = it,
@@ -139,19 +187,22 @@ class SuperUserRepositoryImpl : SuperUserRepository {
                 newApps += AppInfo(
                     label = "WebView Zygote",
                     packageInfo = placeholder,
-                    profile = Natives.getAppProfile(WEBVIEW_ZYGOTE_PROFILE_KEY, WEBVIEW_ZYGOTE_UID),
+                    profile = if (magiskPolicies != null) {
+                        Natives.Profile(
+                            WEBVIEW_ZYGOTE_PROFILE_KEY,
+                            WEBVIEW_ZYGOTE_UID,
+                            allowSu = magiskPolicies[WEBVIEW_ZYGOTE_UID] == 2,
+                        )
+                    } else {
+                        Natives.getAppProfile(WEBVIEW_ZYGOTE_PROFILE_KEY, WEBVIEW_ZYGOTE_UID)
+                    },
                     profileKey = WEBVIEW_ZYGOTE_PROFILE_KEY,
                     special = true,
                 )
 
                 Log.i(TAG, "load cost: ${SystemClock.elapsedRealtime() - start}")
                 Pair(newApps, idsArray.toList())
-            } finally {
-                withContext(NonCancellable + Dispatchers.Main) {
-                    RootService.unbind(currentConnection)
-                }
-            }
-        }
+        }.onFailure { Log.e(TAG, "scanAppList failed", it) }
     }
 
     override suspend fun refreshProfiles(currentApps: List<AppInfo>): Result<List<AppInfo>> = withContext(Dispatchers.IO) {
@@ -159,7 +210,7 @@ class SuperUserRepositoryImpl : SuperUserRepository {
             if (currentApps.isEmpty()) return@runCatching emptyList()
 
             currentApps.map {
-                val profile = Natives.getAppProfile(it.profileKey, it.uid)
+                val profile = com.sukisu.ultra.ui.util.currentProfile(it.profileKey, it.uid)
                 it.copy(profile = profile)
             }
         }

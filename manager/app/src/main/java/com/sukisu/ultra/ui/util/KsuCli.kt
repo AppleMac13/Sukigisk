@@ -29,6 +29,7 @@ import com.sukisu.ultra.ksuApp
 import com.sukisu.ultra.ui.screen.susfs.util.SuSFSConfig
 import okhttp3.OkHttpClient
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -67,13 +68,36 @@ data class FlashResult(val code: Int, val err: String, val showReboot: Boolean, 
 }
 
 object KsuCli {
-    val SHELL: Shell = createRootShell()
+    // magisk 的 su 起的 shell 会中途死掉，缓存一个实例会让后面的命令全部静默失败，
+    // 这里改成走一个带存活检查的缓存。
+    val SHELL: Shell get() = getRootShell()
     val GLOBAL_MNT_SHELL: Shell = createRootShell(true)
 }
 
+private var cachedShell: Shell? = null
+private var lastShellCheck = 0L
+
 fun getRootShell(globalMnt: Boolean = false): Shell {
-    return if (globalMnt) KsuCli.GLOBAL_MNT_SHELL else {
-        KsuCli.SHELL
+    if (globalMnt) return KsuCli.GLOBAL_MNT_SHELL
+    val now = SystemClock.elapsedRealtime()
+    val cur = cachedShell
+    if (cur != null && now - lastShellCheck < 60_000) return cur
+    synchronized(KsuCli::class.java) {
+        val cached = cachedShell
+        if (cached != null) {
+            val alive = runCatching { cached.newJob().add("true").exec().isSuccess }
+                .getOrDefault(false)
+            if (alive) {
+                lastShellCheck = now
+                return cached
+            }
+        }
+        val fresh = runCatching { createRootShell() }.getOrElse {
+            Shell.Builder.create().build("sh")
+        }
+        cachedShell = fresh
+        lastShellCheck = now
+        return fresh
     }
 }
 
@@ -382,9 +406,126 @@ fun install() {
 fun listModules(): String {
     val shell = getRootShell()
 
+    // magisk 没有 ksud 的 module 子命令（applet 只有 su / resetprop），
+    // 直接扫 /data/adb/modules 并拼成和 ksud 一样的 JSON。
+    if (isMagiskRuntime()) return listMagiskModules(shell)
+
     val out = shell.newJob()
-        .add("${getKsuDaemonPath()} module list").to(ArrayList(), null).exec().out
+        .add("${getKsuDaemonPath()} module list").exec().out
     return out.joinToString("\n").ifBlank { "[]" }
+}
+
+private fun isMagiskShell(shell: Shell): Boolean = shell.newJob()
+    .add("[ -x /data/adb/magisk/magisk ] && echo MAGISK")
+    .exec().out.joinToString("").contains("MAGISK")
+
+@Volatile
+private var magiskRuntime: Boolean? = null
+
+/**
+ * 当前是不是跑在 magisk 上（没有 ksud，授权/模块都得走 magisk 自己的数据库和目录）。
+ * 用 JNI 的 hookType 判断，比在 shell 里探测稳。
+ */
+fun isMagiskRuntime(): Boolean = magiskRuntime ?: runCatching {
+    Natives.getHookType().contains("magisk", ignoreCase = true)
+}.getOrDefault(false).also { magiskRuntime = it }
+
+/** 读 magisk 的 su 授权表：uid -> policy（2 = 允许）。 */
+fun magiskPolicyMap(): Map<Int, Int> {
+    val cache = java.io.File(ksuApp.cacheDir, "magisk_policies.db")
+    val dumped = runSu("cat /data/adb/magisk.db > '${cache.absolutePath}' && echo DB_OK")
+    if (!dumped.contains("DB_OK")) return emptyMap()
+    return runCatching {
+        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+            cache.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+        )
+        db.use { d ->
+            val map = HashMap<Int, Int>()
+            d.rawQuery("select uid,policy from policies", null).use { c ->
+                while (c.moveToNext()) map[c.getInt(0)] = c.getInt(1)
+            }
+            map
+        }
+    }.getOrDefault(emptyMap())
+}
+
+/** 写 magisk 的 su 授权表，policy 2 = 允许、0 = 拒绝。 */
+fun setMagiskPolicy(uid: Int, allow: Boolean): Boolean {
+    val policy = if (allow) 2 else 0
+    val sql = "insert or replace into policies(uid,policy,until,logging,notification) values($uid,$policy,0,1,1)"
+    val out = runSu(
+        "M=/debug_ramdisk/magisk; [ -x ${'$'}M ] || M=/data/adb/magisk/magisk; ${'$'}M --sqlite \"$sql\" && echo POLICY_OK"
+    )
+    val ok = out.contains("POLICY_OK")
+    Log.i(TAG, "magisk policy $uid=$policy -> $ok ${out.take(120)}")
+    return ok
+}
+
+/** 统一的 profile 读取：magisk 上没有 kernel 接口，用 su 授权表映射成 Profile。 */
+fun currentProfile(key: String?, uid: Int): Natives.Profile {
+    if (!isMagiskRuntime()) return Natives.getAppProfile(key, uid)
+    val allow = magiskPolicyMap()[uid] == 2
+    return Natives.Profile(key ?: "", uid, allowSu = allow)
+}
+
+private val MAGISK_MODULE_SCAN = """
+    for d in /data/adb/modules/*; do
+      p="${'$'}d/module.prop"
+      [ -f "${'$'}p" ] || continue
+      id=${'$'}(basename "${'$'}d")
+      n=${'$'}(sed -n 's/^name=//p' "${'$'}p" | head -n1)
+      v=${'$'}(sed -n 's/^version=//p' "${'$'}p" | head -n1)
+      vc=${'$'}(sed -n 's/^versionCode=//p' "${'$'}p" | head -n1)
+      a=${'$'}(sed -n 's/^author=//p' "${'$'}p" | head -n1)
+      ds=${'$'}(sed -n 's/^description=//p' "${'$'}p" | head -n1)
+      up=${'$'}(sed -n 's/^updateJson=//p' "${'$'}p" | head -n1)
+      e=1; [ -f "${'$'}d/disable" ] && e=0
+      r=0; [ -f "${'$'}d/remove" ] && r=1
+      u=0; [ -f "${'$'}d/update" ] && u=1
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "${'$'}id" "${'$'}n" "${'$'}v" "${'$'}vc" "${'$'}a" "${'$'}ds" "${'$'}e" "${'$'}r" "${'$'}u" "${'$'}up"
+    done
+""".trimIndent()
+
+/**
+ * 直接用 su 起一次性进程跑命令并取 stdout。
+ * libsu 复用的 shell 在这套 magisk 上会静默返回空输出，这条路径是实测可靠的。
+ */
+fun runSu(cmd: String): String = runCatching {
+    val process = ProcessBuilder(suBinaryPath(), "-c", cmd)
+        .redirectErrorStream(true)
+        .start()
+    if (!process.waitFor(10, TimeUnit.SECONDS)) {
+        process.destroyForcibly()
+        ""
+    } else {
+        process.inputStream.bufferedReader().use { it.readText() }
+    }
+}.getOrDefault("")
+
+private fun listMagiskModules(shell: Shell): String {
+    val raw = runSu(MAGISK_MODULE_SCAN)
+    Log.i(TAG, "magisk scan raw: ${raw.take(300).replace("\n", "\\n")}")
+    val lines = raw.split("\n")
+    val array = JSONArray()
+    for (line in lines) {
+        if (line.isBlank()) continue
+        val f = line.split('\t')
+        if (f.size < 9) continue
+        array.put(JSONObject().apply {
+            put("id", f[0])
+            put("name", f[1])
+            put("version", f[2])
+            put("versionCode", f[3].toLongOrNull() ?: 0L)
+            put("author", f[4].ifBlank { "Unknown" })
+            put("description", f[5])
+            put("enabled", f[6] == "1")
+            put("remove", f[7] == "1")
+            put("update", f[8] == "1")
+            put("updateJson", f.getOrNull(9) ?: "")
+        })
+    }
+    Log.i(TAG, "magisk modules: ${array.length()}")
+    return array.toString()
 }
 
 fun getModuleCount(): Int {
@@ -400,6 +541,14 @@ fun getSuperuserCount(): Int {
 }
 
 fun toggleModule(id: String, enable: Boolean): Boolean {
+    val shell = getRootShell()
+    if (isMagiskShell(shell)) {
+        val file = "/data/adb/modules/$id/disable"
+        val cmd = if (enable) "rm -f $file" else "touch $file"
+        val ok = ShellUtils.fastCmdResult(shell, cmd)
+        Log.i(TAG, "$cmd result: $ok")
+        return ok
+    }
     val cmd = if (enable) {
         "module enable $id"
     } else {
@@ -411,6 +560,12 @@ fun toggleModule(id: String, enable: Boolean): Boolean {
 }
 
 fun undoUninstallModule(id: String): Boolean {
+    val shell = getRootShell()
+    if (isMagiskShell(shell)) {
+        val ok = ShellUtils.fastCmdResult(shell, "rm -f /data/adb/modules/$id/remove")
+        Log.i(TAG, "undo uninstall module $id result: $ok")
+        return ok
+    }
     val cmd = "module undo-uninstall $id"
     val result = execKsud(cmd, true)
     Log.i(TAG, "undo uninstall module $id result: $result")
@@ -418,6 +573,12 @@ fun undoUninstallModule(id: String): Boolean {
 }
 
 fun uninstallModule(id: String): Boolean {
+    val shell = getRootShell()
+    if (isMagiskShell(shell)) {
+        val ok = ShellUtils.fastCmdResult(shell, "touch /data/adb/modules/$id/remove")
+        Log.i(TAG, "uninstall module $id result: $ok")
+        return ok
+    }
     val cmd = "module uninstall $id"
     val result = execKsud(cmd, true)
     Log.i(TAG, "uninstall module $id result: $result")
@@ -1011,10 +1172,33 @@ fun rootAvailable(): Boolean {
         val process = ProcessBuilder(suBinaryPath(), "-c", "id -u")
             .redirectErrorStream(true)
             .start()
-        val out = process.inputStream.bufferedReader().use { it.readText() }
-        process.waitFor(5, TimeUnit.SECONDS)
-        out.trim().startsWith("0") || out.contains("uid=0")
+        if (!process.waitFor(5, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            false
+        } else {
+            val out = process.inputStream.bufferedReader().use { it.readText() }
+            out.trim().startsWith("0") || out.contains("uid=0")
+        }
     }.getOrDefault(false)
+}
+
+@Volatile
+private var rootProbeDone = false
+@Volatile
+private var rootProbeResult = false
+
+/**
+ * 给业务层用的 root 判断：libsu 的 Shell.isRoot 在 magisk 上会恒为 false，
+ * 这里在 shell 里探一次 id -u 并缓存，避免超级用户/模块列表直接走失败分支。
+ */
+fun isRootAvailable(): Boolean {
+    if (getRootShell().isRoot) return true
+    if (rootProbeDone) return rootProbeResult
+    val ok = rootAvailable()
+    rootProbeResult = ok
+    rootProbeDone = true
+    Log.i(TAG, "root probe: $ok")
+    return ok
 }
 
 suspend fun getCurrentKmi(): String = withContext(Dispatchers.IO) {
@@ -1038,7 +1222,7 @@ suspend fun isAbDevice(): Boolean = withContext(Dispatchers.IO) {
 
 suspend fun getDefaultPartition(): String = withContext(Dispatchers.IO) {
     val shell = getRootShell()
-    if (shell.isRoot) {
+    if (isRootAvailable()) {
         val cmd = "boot-info default-partition"
         ShellUtils.fastCmd(shell, "${getKsuDaemonPath()} $cmd").trim()
     } else {
@@ -1191,11 +1375,13 @@ fun getKpmModuleCount(): Int {
 }
 
 fun runCmd(shell: Shell, cmd: String): String {
-    return shell.newJob()
+    // 读传进去的 list，而不是 job.out：libsu 在 to() 模式下不一定回填 job.out。
+    val out = mutableListOf<String>()
+    shell.newJob()
         .add(cmd)
-        .to(mutableListOf<String>(), null)
-        .exec().out
-        .joinToString("\n")
+        .to(out, null)
+        .exec()
+    return out.joinToString("\n")
 }
 
 suspend fun streamFile(path: String): List<String> = withContext(Dispatchers.IO) {

@@ -29,6 +29,11 @@
 
     <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur,com.sukisu.ultra.ai" />
 
+    <!-- 管理 root 授权需要看到设备上的全部应用（uid 反查包名/图标）。 -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <!-- Android 11 package visibility: needed to resolve the vendor gallery's crop screen. -->
     <queries>
         <intent>
